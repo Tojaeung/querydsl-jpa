@@ -201,4 +201,65 @@ class QuerydslApplicationTests {
         }
 
     }
+
+    @Test
+    public void 조인() {
+        // 이너조인
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("member1", "member2");
+
+        // 세타조인(연관관계 없어도 조인)
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Member> result2 = queryFactory
+                .select(member)
+                .from(member, team) // cross join
+                .where(member.username.eq(team.name))
+                .fetch();
+
+        assertThat(result2)
+                .extracting("username")
+                .containsExactly("teamA", "teamB");
+
+    }
+
+    @Test
+    public void 조인on절() {
+
+        /*
+         * 내부조인일때는 on, where 사용이 돌일하다. 되도록 where를 사용한다.
+         * 외부조인은 on, where 사용 결과가 다르다 주의할것 !!
+         * */
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team)
+                .on(team.name.eq("teamA"))  // 필터링하는게 아니라 조인할거만 조인하는 기능
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    @Test
+    public void 페치조인() {
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        System.out.println(findMember.toString());
+
+    }
 }
