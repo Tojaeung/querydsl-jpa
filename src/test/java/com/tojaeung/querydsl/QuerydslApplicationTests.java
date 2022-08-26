@@ -3,6 +3,7 @@ package com.tojaeung.querydsl;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.tojaeung.querydsl.domain.Member;
+import com.tojaeung.querydsl.domain.QMember;
 import com.tojaeung.querydsl.domain.Team;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.EntityManager;
 import java.util.List;
 
+import static com.querydsl.jpa.JPAExpressions.select;
 import static com.tojaeung.querydsl.domain.QMember.member;
 import static com.tojaeung.querydsl.domain.QTeam.team;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -261,5 +263,31 @@ class QuerydslApplicationTests {
 
         System.out.println(findMember.toString());
 
+    }
+
+    @Test
+    public void 서브쿼리() {
+        // 서브쿼리 alias 달라야함, 새로 만들어줌
+        QMember subMember = new QMember("subMember");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.eq(
+                        select(subMember.age.max())
+                                .from(subMember)
+                ))
+                .fetch();
+
+        assertThat(result).extracting("age").containsExactly(40);
+
+        List<Member> result2 = queryFactory
+                .selectFrom(member)
+                .where(member.age.goe(
+                        select(subMember.age.avg())
+                                .from(subMember)
+                ))
+                .fetch();
+
+        assertThat(result2).extracting("age").containsExactly(30, 40);
     }
 }
