@@ -3,6 +3,7 @@ package com.tojaeung.querydsl;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.tojaeung.querydsl.domain.Member;
@@ -367,4 +368,38 @@ class QuerydslApplicationTests {
 
         System.out.println("result = " + result);
     }
+
+    @Test
+    public void where동적쿼리() {
+        String username = "member1";
+        int age = 10;
+
+        List<Member> result = searchMember(username, age);
+
+        System.out.println("result = " + result);
+    }
+
+    private List<Member> searchMember(String usernameCond, int ageCond) {
+        return queryFactory
+                .selectFrom(member)
+                // .where(usernameEq(usernameCond), ageEq(ageCond))
+                .where(allEq(usernameCond, ageCond))
+                .fetch();
+    }
+
+    // 재사용 가능
+    private BooleanExpression ageEq(Integer ageCond) {
+        return ageCond != null ? member.age.eq(ageCond) : null;
+    }
+
+    // 재사용 가능
+    private BooleanExpression usernameEq(String usernameCond) {
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+
+    // 조립 가능
+    private BooleanExpression allEq(String usernameCond, Integer ageCond) {
+        return usernameEq(usernameCond).and(ageEq(ageCond));
+    }
+
 }
