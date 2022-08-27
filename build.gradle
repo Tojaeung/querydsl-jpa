@@ -13,7 +13,7 @@ plugins {
 
 group = 'com.tojaeung'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '17'
+sourceCompatibility = '8'
 
 configurations {
     compileOnly {
