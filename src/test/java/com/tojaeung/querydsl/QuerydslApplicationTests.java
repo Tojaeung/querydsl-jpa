@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -402,4 +403,26 @@ class QuerydslApplicationTests {
         return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 
+    @Test
+    @Commit
+    public void 수정삭제벌크연산() {
+        Long updateCount = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+        /*
+         * 벌크 연산 후에는 영속성 컨텍스트를 초기화 시켜야한다.
+         * 왜냐하면 영속성 컨텍스트를 거치지 않고 바로 디비로 쿼리되기 떄문이다.
+         * */
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        System.out.println("result = " + result);
+    }
 }
