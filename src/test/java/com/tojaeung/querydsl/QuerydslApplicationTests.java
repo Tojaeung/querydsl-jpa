@@ -1,10 +1,16 @@
 package com.tojaeung.querydsl;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.tojaeung.querydsl.domain.Member;
 import com.tojaeung.querydsl.domain.QMember;
 import com.tojaeung.querydsl.domain.Team;
+import com.tojaeung.querydsl.dto.ComplexMemberDto;
+import com.tojaeung.querydsl.dto.MemberDto;
+import com.tojaeung.querydsl.dto.QMemberDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -289,5 +295,76 @@ class QuerydslApplicationTests {
                 .fetch();
 
         assertThat(result2).extracting("age").containsExactly(30, 40);
+    }
+
+    @Test
+    public void 프로젝션조회() {
+
+        // setter조회 (@setter에 매칭해서 꽂아넣음, 매칭 안되면 null)
+        List<MemberDto> setterResult = queryFactory
+                .select(Projections.bean(MemberDto.class,
+                        member.username,
+                        member.age
+                )).from(member)
+                .fetch();
+
+        System.out.println("setterResult = " + setterResult);
+
+        // filed 조회 (DTO 필드값에 매칭해서 꽂아넣음, 매칭 안되면 null)
+        List<MemberDto> fieldResult = queryFactory
+                .select(Projections.fields(MemberDto.class,
+                        member.username,
+                        member.age
+                )).from(member)
+                .fetch();
+
+        System.out.println("fieldResult = " + fieldResult);
+
+        // constructor 조회 (생성자 타입에 맞춰서 꽂아넣음, 매칭 안되면 null)
+        List<MemberDto> constructorResult = queryFactory
+                .select(Projections.constructor(MemberDto.class,
+                        member.username,
+                        member.age
+                )).from(member)
+                .fetch();
+
+        System.out.println("constructorResult = " + constructorResult);
+
+    }
+
+    @Test
+    public void 복잡한프로젝션조회() {
+        // 서브쿼리 alias 위해서 생성
+        QMember memberSub = new QMember("memberSub");
+
+        List<ComplexMemberDto> result = queryFactory
+                .select(Projections.constructor(ComplexMemberDto.class,
+                        member.username.as("name"),
+                        ExpressionUtils.as(JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub), "age")
+                ))
+                .from(member)
+                .fetch();
+
+        System.out.println("result = " + result);
+    }
+
+    @Test
+    public void 프로젝션어노테이션활용() {
+        QMember memberSub = new QMember("memberSub");
+
+        // 장점: 컴파일시점에서 오류 찾을수 있음
+        // 단점: DTO 쿼리dsl에 의존하게 됨
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(
+                        member.username,
+                        ExpressionUtils.as(JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub), "age")))
+                .from(member)
+                .fetch();
+
+        System.out.println("result = " + result);
     }
 }
