@@ -5,18 +5,24 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.tojaeung.querydsl.dto.MemberSearchCondition;
 import com.tojaeung.querydsl.dto.MemberTeamDto;
 import com.tojaeung.querydsl.dto.QMemberTeamDto;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.util.StringUtils;
 
+import javax.persistence.EntityManager;
 import java.util.List;
 
 import static com.tojaeung.querydsl.domain.QMember.member;
 import static com.tojaeung.querydsl.domain.QTeam.team;
 
-@RequiredArgsConstructor
 public class MemberRepositoryImpl implements MemberRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
+
+    public MemberRepositoryImpl(EntityManager em) {
+        this.queryFactory = new JPAQueryFactory(em);
+    }
 
     @Override
     public List<MemberTeamDto> search(MemberSearchCondition condition) {
@@ -53,6 +59,33 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
 
     private BooleanExpression ageLoe(Integer ageLoe) {
         return ageLoe != null ? member.age.loe(ageLoe) : null;
+    }
+
+
+    @Override
+    public Page<MemberTeamDto> searchPage(MemberSearchCondition condition, Pageable pageable) {
+        List<MemberTeamDto> results = queryFactory
+                .select(new QMemberTeamDto(
+                        member.id.as("memberId"),
+                        member.username,
+                        member.age,
+                        team.Id.as("teamId"),
+                        team.name.as("teamName")
+                ))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(
+                        usernameEq(condition.getUsername()),
+                        teamNameEq(condition.getTeamName()),
+                        ageGoe(condition.getAgeGoe()),
+                        ageLoe(condition.getAgeLoe())
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+
+        return new PageImpl<>(results, pageable, results.size());
     }
 
 
